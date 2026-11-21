@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#0b0c0f" />
+  <title>Air String Guitar — Sanal Gitar Teli & El Takibi</title>
+  <style>
+    :root {
+      --bg: #0b0c0f; --surface: rgba(20,22,27,0.86); --solid: #15171c; --hover: #22252d;
+      --border: rgba(255,255,255,0.11); --border-s: rgba(255,255,255,0.2);
+      --text: #f4f1ea; --muted: #9a9da6; --accent: #f43f8e; --accent-h: #e11d74;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; user-select: none; }
+    .app { position: relative; width: 100vw; height: 100vh; height: 100dvh; }
+    #webcam { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; pointer-events: none; }
+    #stage { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: crosshair; }
+    .top { position: absolute; top: max(12px, env(safe-area-inset-top)); left: 12px; right: 12px; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 8px; pointer-events: none; }
+    .top > * { pointer-events: auto; }
+    .top-r { display: flex; align-items: center; gap: 6px; }
+    .pill { display: flex; align-items: center; gap: 10px; background: var(--surface); backdrop-filter: blur(14px); border: 1px solid var(--border); border-radius: 12px; padding: 7px 12px; }
+    .mark { width: 26px; height: 26px; border-radius: 7px; background: linear-gradient(135deg,#f43f8e,#f59e0b); display: grid; place-items: center; font-weight: 700; color: #fff; }
+    .title { font-size: 14px; font-weight: 600; }
+    .sub { font-size: 11px; color: var(--muted); }
+    .tele { display: flex; align-items: center; gap: 14px; font-family: ui-monospace, SFMono-Regular, monospace; }
+    .tele-i { display: flex; flex-direction: column; }
+    .tele-l { font-family: inherit; font-size: 10px; color: var(--muted); text-transform: uppercase; }
+    .tele-v { font-size: 14px; font-weight: 600; }
+    .tele-v.a { color: #fda4af; }
+    .sep { width: 1px; height: 24px; background: var(--border); }
+    .btn { border: 1px solid var(--border); background: var(--surface); backdrop-filter: blur(12px); color: var(--text); font: 500 13px inherit; padding: 8px 11px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+    .btn:hover { background: var(--hover); border-color: var(--border-s); }
+    .btn.pri { background: var(--accent); border-color: transparent; color: #fff; font-weight: 600; }
+    .btn.pri:hover { background: var(--accent-h); }
+    .btn.on { background: rgba(244,63,142,0.22); border-color: rgba(244,63,142,0.55); color: #fbcfe8; }
+    select.sel { background: var(--solid); border: 1px solid var(--border); color: var(--text); font: 500 12.5px inherit; padding: 7px 10px; border-radius: 8px; cursor: pointer; }
+    .dock { position: absolute; bottom: max(12px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); z-index: 20; max-width: calc(100vw - 20px); background: var(--surface); backdrop-filter: blur(18px); border: 1px solid var(--border); border-radius: 16px; padding: 8px 12px; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 7px; box-shadow: 0 18px 48px rgba(0,0,0,0.5); }
+    .dock-main { display: flex; align-items: center; gap: 7px; }
+    .dock-extra { display: contents; }
+    .mob-only { display: none; }
+    .step { display: inline-flex; align-items: center; background: var(--solid); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .step button { background: transparent; border: none; color: var(--text); width: 28px; height: 28px; font-size: 16px; cursor: pointer; }
+    .step button:hover { background: var(--hover); }
+    .step span { min-width: 50px; text-align: center; font: 600 12px ui-monospace, monospace; }
+    .status { position: absolute; top: 68px; left: 50%; transform: translateX(-50%); z-index: 18; background: rgba(15,17,22,0.84); border: 1px solid var(--border); border-radius: 999px; padding: 5px 13px; font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 8px; max-width: calc(100vw - 24px); }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: #f59e0b; flex-shrink: 0; }
+    .dot.ok { background: #22c55e; }
+    .overlay { position: absolute; inset: 0; z-index: 30; background: rgba(11,12,15,0.85); backdrop-filter: blur(14px); display: grid; place-items: center; padding: 18px; }
+    .overlay.hide { display: none; }
+    .card { width: 100%; max-width: 470px; background: #14161b; border: 1px solid var(--border-s); border-radius: 18px; padding: 24px; box-shadow: 0 28px 80px rgba(0,0,0,0.65); }
+    .card h1 { font-size: 22px; margin-bottom: 8px; }
+    .card p { font-size: 13.5px; color: var(--muted); line-height: 1.5; margin-bottom: 16px; }
+    .card ul { list-style: none; display: grid; gap: 10px; margin-bottom: 20px; font-size: 13px; color: #e4e4e7; }
+    .card li { display: flex; gap: 10px; align-items: flex-start; line-height: 1.45; }
+    .num { width: 20px; height: 20px; border-radius: 5px; background: rgba(244,63,142,0.2); color: #fda4af; display: grid; place-items: center; font: 600 11px ui-monospace, monospace; flex-shrink: 0; }
+    .btns { display: flex; flex-direction: column; gap: 9px; }
+    .btns .btn { justify-content: center; padding: 11px 16px; font-size: 14px; }
+    .err { margin-top: 12px; padding: 10px; border-radius: 8px; background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.35); color: #fecaca; font-size: 12px; display: none; }
+    .err.show { display: block; }
+    @media (max-width: 820px) {
+      .tele, .sub { display: none; }
+      .status { top: 58px; font-size: 11px; }
+      .mob-only { display: inline-flex; }
+      .dock-extra { display: none; }
+      .dock.open .dock-extra { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; width: 100%; padding-top: 6px; border-top: 1px solid var(--border); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <video id="webcam" playsinline webkit-playsinline autoplay muted></video>
+    <canvas id="stage"></canvas>
+
+    <div class="top">
+      <div class="pill">
+        <div class="mark">♪</div>
+        <div>
+          <div class="title">Air String Guitar</div>
+          <div class="sub" id="modeSub">Kamera & El Takibi</div>
+        </div>
+      </div>
+      <div class="pill tele">
+        <div class="tele-i"><span class="tele-l">Nota</span><span class="tele-v a" id="tNote">--</span></div>
+        <div class="sep"></div>
+        <div class="tele-i"><span class="tele-l">Frekans</span><span class="tele-v" id="tFreq">0 Hz</span></div>
+        <div class="sep"></div>
+        <div class="tele-i"><span class="tele-l">Tel Boyu</span><span class="tele-v" id="tLen">0 px</span></div>
+        <div class="sep"></div>
+        <div class="tele-i"><span class="tele-l">Tel</span><span class="tele-v" id="tCnt">1</span></div>
+      </div>
+      <div class="top-r">
+        <button id="flipBtn" class="btn mob-only" type="button" style="display:none">Çevir</button>
+        <button id="switchBtn" class="btn" type="button">Fare Modu</button>
+      </div>
+    </div>
+
+    <div class="status"><span class="dot" id="sDot"></span><span id="sTxt">Başlamak için kamera veya fare modunu seç</span></div>
+
+    <div class="dock" id="dock">
+      <div class="dock-main">
+        <div class="step">
+          <button id="remBtn" type="button">−</button>
+          <span id="cntLbl">1 Tel</span>
+          <button id="addBtn" type="button">+</button>
+        </div>
+        <button id="strumBtn" class="btn pri" type="button">Tıngırdat</button>
+        <button id="drawerBtn" class="btn mob-only" type="button">Ayarlar ▾</button>
+      </div>
+      <div class="dock-extra">
+        <button id="autoPinBtn" class="btn on" type="button" title="İki elini kıstırıp 1 sn sabit tutunca tel havaya kilitlenir">Oto Sabitle</button>
+        <button id="pinBtn" class="btn" type="button">Sabitle</button>
+        <button id="clrBtn" class="btn" type="button" style="display:none">Sabitleri Sil (<span id="pinCnt">0</span>)</button>
+        <select id="presetSel" class="sel">
+          <option value="acoustic">Akustik Gitar</option>
+          <option value="classical">Klasik Naylon</option>
+          <option value="electric">Elektro Temiz</option>
+          <option value="bass">Bas Gitar</option>
+        </select>
+        <select id="scaleSel" class="sel">
+          <option value="fretless">Sürekli (Gerçek İp)</option>
+          <option value="chromatic">Gitar Perdeleri</option>
+          <option value="pentatonic">Mi Minör Pentatonik</option>
+          <option value="major">Do Majör</option>
+        </select>
+        <select id="tuningSel" class="sel">
+          <option value="standard">Standart (EADGBE)</option>
+          <option value="openG">Open G Akor</option>
+          <option value="openD">Open D Akor</option>
+          <option value="dadgad">DADGAD</option>
+        </select>
+        <button id="skelBtn" class="btn on" type="button">İskelet</button>
+        <button id="pinchBtn" class="btn" type="button">Pinch</button>
+      </div>
+    </div>
+
+    <div class="overlay" id="overlay">
+      <div class="card">
+        <h1>Air String Guitar</h1>
+        <p>İki elinin işaret ve baş parmağı arasında gerçek gitar fiziğiyle titreşen sanal teller oluştur, kısaltıp uzatarak tonu bük ve çal.</p>
+        <ul>
+          <li><span class="num">1</span><span>İki elini kameraya göster — başparmak ve işaret parmağın arasında ışıklı tel gerilir. Ellerini yaklaştırınca ses incelir, uzaklaştırınca kalınlaşır.</span></li>
+          <li><span class="num">2</span><span><strong>Klavyesiz Sabitleme:</strong> İki elini kıstırıp <strong>1 saniye sabit tut</strong> — ortadaki halka dolunca tel havada kilitlenir! İki elinle <strong>yumruk</strong> yapınca sabit teller silinir.</span></li>
+          <li><span class="num">3</span><span>İşaret parmağını kaldırıp tellerin üzerinden geçirerek çal; <strong>+</strong> ile 6 tele kadar ekleyebilirsin.</span></li>
+        </ul>
+        <div class="btns">
+          <button id="camBtn" class="btn pri" type="button">Kamerayı ve Gitarı Başlat</button>
+          <button id="mouseBtn" class="btn" type="button">Kamerasız Dene (Fare / Dokunmatik)</button>
+        </div>
+        <div class="err" id="errBox"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    const MP_ESM = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.mjs';
+    const MP_WASM = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm';
+    const MP_MODEL = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
+    const CONNS = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
+
+    // ---- Real-time Karplus-Strong AudioWorklet Engine ----
+    const KS_CODE = `
+      class KSP extends AudioWorkletProcessor {
+        constructor(){ super(); this.bufSize=4096; this.voices=new Map();
+          this.port.onmessage=(e)=>{ const m=e.data;
+            if(m.t==='p') this.pluck(m);
+            else if(m.t==='f'){ const v=this.voices.get(m.id); if(v&&v.a) v.tf=Math.max(32,Math.min(2400,m.f)); }
+            else if(m.t==='d'){ for(const v of this.voices.values()) v.d=true; }
+          };
+        }
+        getV(id){
+          if(this.voices.has(id)) return this.voices.get(id);
+          if(this.voices.size>=16){
+            let pk=null, me=1e9;
+            for(const [k,v] of this.voices){ if(!v.a){pk=k;break;} if(v.e<me){me=v.e;pk=k;} }
+            if(pk!==null){ const r=this.voices.get(pk); this.voices.delete(pk); this.voices.set(id,r); return r; }
+          }
+          const v={b:new Float32Array(this.bufSize),w:0,dl:200,tf:220,ps:0,dx:0,dy:0,br:0.6,su:3.2,g:0.7,pan:0,a:false,d:false,e:0,ae:0,ai:0.01};
+          this.voices.set(id,v); return v;
+        }
+        pluck(m){
+          const v=this.getV(m.id), f=Math.max(32,Math.min(2400,m.f||220)), vel=Math.max(0.15,Math.min(1,m.v||0.8));
+          const pos=Math.max(0.08,Math.min(0.92,m.pos||0.35)), br=m.br??0.6, su=m.su??3.2;
+          const dl=Math.max(16,Math.min(this.bufSize-4,sampleRate/f-0.5)), per=Math.min(this.bufSize-2,Math.ceil(dl));
+          const raw=new Float32Array(per); let lp=0, cut=Math.min(0.95,0.25+br*0.55+vel*0.2);
+          for(let i=0;i<per;i++){ lp+=cut*((Math.random()*2-1)-lp); raw[i]=lp; }
+          const cmb=Math.max(1,Math.floor(pos*per)), exc=new Float32Array(per); let mean=0;
+          for(let i=0;i<per;i++){ exc[i]=raw[i]-0.72*(i>=cmb?raw[i-cmb]:0); mean+=exc[i]; }
+          mean/=per; let pk=1e-4;
+          for(let i=0;i<per;i++){ exc[i]-=mean; const a=Math.abs(exc[i]); if(a>pk) pk=a; }
+          v.b.fill(0); const sc=(0.78/pk)*vel;
+          for(let i=0;i<per;i++) v.b[i]=exc[i]*sc*(i<6?i/6:1);
+          v.w=per%this.bufSize; v.dl=dl; v.tf=f; v.ps=0; v.dx=0; v.dy=0; v.br=br; v.su=su;
+          v.g=0.55+vel*0.35; v.pan=Math.max(-0.7,Math.min(0.7,m.pan||0)); v.a=true; v.d=false; v.e=1; v.ae=0; v.ai=1/Math.max(12,Math.floor(sampleRate*0.0025));
+        }
+        process(_,outs){
+          const out=outs[0]; if(!out||!out.length) return true;
+          const L=out[0], R=out[1]||null, N=L.length, mask=this.bufSize-1;
+          L.fill(0); if(R) R.fill(0);
+          for(const v of this.voices.values()){
+            if(!v.a) continue;
+            const td=Math.max(16,Math.min(this.bufSize-4,sampleRate/v.tf-0.5));
+            const fn=sampleRate/Math.max(16,v.dl+0.5), t60=v.su*Math.pow(220/Math.max(70,fn),0.25);
+            let dec=Math.max(0.955,Math.min(0.9978,Math.exp(-6.907755/Math.max(15,t60*fn))));
+            if(v.d) dec*=0.92;
+            const alp=0.22+v.br*0.58, pL=Math.cos((v.pan+1)*Math.PI*0.25), pR=Math.sin((v.pan+1)*Math.PI*0.25);
+            let en=0;
+            for(let i=0;i<N;i++){
+              v.dl+=(td-v.dl)*0.003;
+              let rp=v.w-v.dl; while(rp<0) rp+=this.bufSize;
+              const i0=rp|0, fr=rp-i0, i1=(i0+1)&mask;
+              const s=v.b[i0]+fr*(v.b[i1]-v.b[i0]), fl=v.ps+alp*(s-v.ps); v.ps=s;
+              const dc=fl-v.dx+0.995*v.dy; v.dx=fl; v.dy=dc;
+              const nx=dc*dec; v.b[v.w]=nx; v.w=(v.w+1)&mask;
+              if(v.ae<1) v.ae=Math.min(1,v.ae+v.ai);
+              const o=nx*v.g*v.ae; L[i]+=o*pL; if(R) R[i]+=o*pR; en+=o*o;
+            }
+            v.e=en; if(en<1e-10) v.a=false;
+          }
+          for(let i=0;i<N;i++){ L[i]=Math.tanh(L[i]*1.15); if(R) R[i]=Math.tanh(R[i]*1.15); }
+          return true;
+        }
+      }
+      registerProcessor('ks-p', KSP);
+    `;
+
+    const PRESETS = {
+      acoustic: { br: 0.62, su: 3.3, oct: 0, rev: 0.24, lo: 4.5, mi: 2.5, hi: 2.0, hf: 3400 },
+      classical: { br: 0.34, su: 2.8, oct: 0, rev: 0.30, lo: 5.5, mi: 1.5, hi: -3.5, hf: 2400 },
+      electric: { br: 0.80, su: 4.6, oct: 0, rev: 0.36, lo: 1.0, mi: 3.5, hi: 4.0, hf: 3800 },
+      bass: { br: 0.30, su: 4.0, oct: -1, rev: 0.14, lo: 7.0, mi: 1.0, hi: -4.0, hf: 1600 },
+    };
+
+    const audio = {
+      ctx: null, node: null, ready: false, wk: false, preset: 'acoustic', fb: new Map(),
+      async init() {
+        if (this.ready) { if (this.ctx.state === 'suspended') await this.ctx.resume(); return; }
+        const AC = window.AudioContext || window.webkitAudioContext;
+        this.ctx = new AC({ latencyHint: 'interactive' });
+        this.lo = this.ctx.createBiquadFilter(); this.lo.type = 'peaking'; this.lo.frequency.value = 115; this.lo.Q.value = 1.4;
+        this.mi = this.ctx.createBiquadFilter(); this.mi.type = 'peaking'; this.mi.frequency.value = 260; this.mi.Q.value = 1.1;
+        this.hi = this.ctx.createBiquadFilter(); this.hi.type = 'highshelf';
+        this.dry = this.ctx.createGain(); this.wet = this.ctx.createGain();
+        const conv = this.ctx.createConvolver(), len = Math.floor(this.ctx.sampleRate * 1.5);
+        const imp = this.ctx.createBuffer(2, len, this.ctx.sampleRate);
+        for (let c = 0; c < 2; c++) { const d = imp.getChannelData(c); let lp = 0; for (let i = 0; i < len; i++) { lp += 0.35 * ((Math.random() * 2 - 1) - lp); d[i] = lp * Math.pow(1 - i / len, 2.8); } }
+        conv.buffer = imp;
+        const comp = this.ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4;
+        const mas = this.ctx.createGain(); mas.gain.value = 0.85;
+        this.lo.connect(this.mi); this.mi.connect(this.hi); this.hi.connect(this.dry); this.hi.connect(conv); conv.connect(this.wet);
+        this.dry.connect(comp); this.wet.connect(comp); comp.connect(mas); mas.connect(this.ctx.destination);
+        this.setPreset(this.preset);
+        if (this.ctx.audioWorklet) {
+          try {
+            const url = URL.createObjectURL(new Blob([KS_CODE], { type: 'application/javascript' }));
+            await this.ctx.audioWorklet.addModule(url); URL.revokeObjectURL(url);
+            this.node = new AudioWorkletNode(this.ctx, 'ks-p', { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2] });
+            this.node.connect(this.lo); this.wk = true;
+          } catch (_) { this.wk = false; }
+        }
+        if (this.ctx.state === 'suspended') await this.ctx.resume();
+        this.ready = true;
+      },
+      setPreset(k) {
+        this.preset = k; if (!this.ctx) return;
+        const p = PRESETS[k] || PRESETS.acoustic, t = this.ctx.currentTime;
+        this.lo.gain.setTargetAtTime(p.lo, t, 0.04); this.mi.gain.setTargetAtTime(p.mi, t, 0.04);
+        this.hi.frequency.setTargetAtTime(p.hf, t, 0.04); this.hi.gain.setTargetAtTime(p.hi, t, 0.04);
+        this.dry.gain.setTargetAtTime(1 - p.rev * 0.45, t, 0.04); this.wet.gain.setTargetAtTime(p.rev, t, 0.04);
+      },
+      pluck(id, freq, v = 0.8, pos = 0.35, pan = 0) {
+        if (!this.ready) return; if (this.ctx.state === 'suspended') this.ctx.resume();
+        const p = PRESETS[this.preset], f = freq * Math.pow(2, p.oct);
+        if (this.wk && this.node) this.node.port.postMessage({ t: 'p', id, f, v, pos, pan, br: p.br, su: p.su });
+        else {
+          const t = this.ctx.currentTime, o = this.ctx.createOscillator(), g = this.ctx.createGain();
+          o.type = 'triangle'; o.frequency.setValueAtTime(f, t);
+          g.gain.setValueAtTime(0.001, t); g.gain.linearRampToValueAtTime(0.38 * v, t + 0.006); g.gain.exponentialRampToValueAtTime(0.001, t + p.su);
+          o.connect(g); g.connect(this.lo); o.start(t); o.stop(t + p.su + 0.05);
+          this.fb.set(id, { o, g });
+        }
+      },
+      pitch(id, freq) {
+        if (!this.ready) return;
+        const p = PRESETS[this.preset], f = Math.max(32, Math.min(2400, freq * Math.pow(2, p.oct)));
+        if (this.wk && this.node) this.node.port.postMessage({ t: 'f', id, f });
+        else { const fv = this.fb.get(id); if (fv) fv.o.frequency.setTargetAtTime(f, this.ctx.currentTime, 0.015); }
+      },
+      dampAll() { if (this.wk && this.node) this.node.port.postMessage({ t: 'd' }); }
+    };
+
+    // ---- Music & Physics ----
+    const NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+    const f2m = (f) => 69 + 12 * Math.log2(Math.max(20, f) / 440);
+    const m2f = (m) => 440 * Math.pow(2, (m - 69) / 12);
+    const nLbl = (f) => { const m = Math.round(f2m(f)); return NOTES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1); };
+    const SCALES = { pentatonic: [4,7,9,11,2], major: [0,2,4,5,7,9,11] };
+    const quant = (raw, mode) => {
+      if (mode === 'fretless') return raw;
+      const em = f2m(raw); if (mode === 'chromatic') return m2f(Math.round(em));
+      const pcs = SCALES[mode]; if (!pcs) return raw;
+      let best = Math.round(em), bd = 99;
+      for (let d = -4; d <= 4; d++) { const c = Math.round(em) + d; if (pcs.includes(((c % 12) + 12) % 12) && Math.abs(c - em) < bd) { bd = Math.abs(c - em); best = c; } }
+      return m2f(best);
+    };
+    const TUNINGS = { standard: [40,45,50,55,59,64], openG: [38,43,50,55,59,62], openD: [38,45,50,54,57,62], dadgad: [38,45,50,55,57,62] };
+    const SUBS = { 1:[3], 2:[2,3], 3:[2,3,4], 4:[1,2,3,4], 5:[1,2,3,4,5], 6:[0,1,2,3,4,5] };
+    const PAL = [{g:'#f472b6',m:'#fbcfe8'},{g:'#fbbf24',m:'#fde68a'},{g:'#38bdf8',m:'#bae6fd'},{g:'#fb7185',m:'#fecdd3'},{g:'#34d399',m:'#a7f3d0'},{g:'#cbd5e1',m:'#f1f5f9'}];
+    const inter = (p0,p1,a,b) => { const rx=p1.x-p0.x,ry=p1.y-p0.y,sx=b.x-a.x,sy=b.y-a.y,dn=rx*sy-ry*sx; if(Math.abs(dn)<1e-6) return null; const qx=a.x-p0.x,qy=a.y-p0.y,t=(qx*sy-qy*sx)/dn,u=(qx*ry-qy*rx)/dn; return (t>=0&&t<=1&&u>=0.02&&u<=0.98)?{u}:null; };
+    const p2s = (p,a,b) => { const vx=b.x-a.x,vy=b.y-a.y,l2=vx*vx+vy*vy; if(l2<1) return {d:999,sd:0,u:0.5}; const u=((p.x-a.x)*vx+(p.y-a.y)*vy)/l2, uc=Math.max(0,Math.min(1,u)), dx=p.x-(a.x+uc*vx), dy=p.y-(a.y+uc*vy), l=Math.sqrt(l2); return {d:Math.hypot(dx,dy), sd:(dx*(-vy/l)+dy*(vx/l)), u}; };
+    const lerp = (a,b,t) => a + (b - a) * t;
+
+    const video = document.getElementById('webcam'), canvas = document.getElementById('stage'), ctx = canvas.getContext('2d');
+    const st = {
+      mode: 'idle', count: 1, tuning: 'standard', scale: 'fretless', skel: true, pinchOnly: false, autoPin: true,
+      live: [], pinned: [], sparks: [], prevPlk: new Map(), cds: new Map(), pid: 100, active: false,
+      vh: { l: { x: 0.28, y: 0.5 }, r: { x: 0.72, y: 0.48 }, drag: null, ptr: { x: -999, y: -999, on: false } },
+      mp: null, lastVT: -1, hands: [], smA: null, smB: null, smP: new Map(), pinSt: { l: false, r: false }, stream: null,
+      gc: { refA: null, refB: null, hold: 0, reset: false, lastMid: null, flash: 0, fPos: { x: 0, y: 0 }, fist: 0 }
+    };
+
+    let W = innerWidth, H = innerHeight, dpr = Math.min(devicePixelRatio || 1, 2);
+    const resize = () => { W = innerWidth; H = innerHeight; dpr = Math.min(devicePixelRatio || 1, 2); canvas.width = Math.floor(W * dpr); canvas.height = Math.floor(H * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); };
+    addEventListener('resize', resize); resize();
+
+    const setStatus = (txt, ok = false) => { document.getElementById('sTxt').textContent = txt; document.getElementById('sDot').classList.toggle('ok', ok); };
+    const updUI = () => {
+      document.getElementById('cntLbl').textContent = `${st.count} Tel`;
+      document.getElementById('pinCnt').textContent = String(st.pinned.length);
+      document.getElementById('clrBtn').style.display = st.pinned.length ? 'inline-flex' : 'none';
+      document.getElementById('tCnt').textContent = String(st.count + st.pinned.length);
+    };
+
+    function rebuild() {
+      const ms = TUNINGS[st.tuning], sub = SUBS[st.count], om = new Map(st.live.map(s => [s.id, s]));
+      st.live = sub.map((si, i) => {
+        const id = `l-${i}`, old = om.get(id), of = m2f(ms[si]);
+        return { id, of, f: old ? old.f : of, a: {x:0,y:0}, b: {x:0,y:0}, len: 300, amp: old?old.amp:0, ph: old?old.ph:0, pos: 0.5, dir: 1, pull: 0, ppos: 0.5, pal: PAL[i % PAL.length], th: Math.max(1.4, 3 - si * 0.28), pin: false };
+      });
+      updUI();
+    }
+
+    function pluckS(s, u, v, dir) {
+      s.amp = Math.min(34, 14 + v * 22); s.pos = Math.max(0.08, Math.min(0.92, u)); s.dir = dir >= 0 ? 1 : -1; s.ph = 0;
+      const hx = s.a.x + (s.b.x - s.a.x) * s.pos, hy = s.a.y + (s.b.y - s.a.y) * s.pos;
+      audio.pluck(s.id, s.f, v, s.pos, (hx / W - 0.5) * 1.1);
+      for (let i = 0; i < 10; i++) { const ag = Math.random() * 6.28, sp = 1.2 + Math.random() * 4 * v; st.sparks.push({ x: hx, y: hy, vx: Math.cos(ag)*sp, vy: Math.sin(ag)*sp, l: 1, d: 0.032 + Math.random()*0.03, c: s.pal.g, sz: 1.5 + Math.random()*2.3 }); }
+    }
+    const strumAll = () => { const all = [...(st.active ? st.live : []), ...st.pinned]; all.forEach((s, i) => setTimeout(() => pluckS(s, 0.35 + (i % 3) * 0.08, 0.85, 1), i * 28)); };
+    const pinNow = () => { if (!st.active) return 0; let n = 0; for (const s of st.live) { if (st.pinned.length >= 12) st.pinned.shift(); const c = { ...s, id: `p-${st.pid++}`, a: {...s.a}, b: {...s.b}, pin: true, amp: 14, ph: 0 }; st.pinned.push(c); audio.pluck(c.id, c.f, 0.65, 0.4, 0); n++; } updUI(); return n; };
+
+    let facing = 'user';
+    const isMob = () => innerWidth < 820 || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    async function startCam() {
+      const eb = document.getElementById('errBox'); eb.classList.remove('show');
+      const cb = document.getElementById('camBtn'); cb.disabled = true; cb.textContent = 'Hazırlanıyor…';
+      try {
+        await audio.init();
+        setStatus('Kamera izni isteniyor…');
+        if (st.stream) { st.stream.getTracks().forEach(t => t.stop()); st.stream = null; }
+        const mob = isMob();
+        st.stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: mob ? 640 : 1280 }, height: { ideal: mob ? 480 : 720 }, facingMode: facing }, audio: false });
+        video.srcObject = st.stream; await video.play();
+        if (!st.mp) {
+          setStatus('MediaPipe el takip modeli yükleniyor…');
+          const { FilesetResolver, HandLandmarker } = await import(MP_ESM);
+          const vis = await FilesetResolver.forVisionTasks(MP_WASM);
+          try { st.mp = await HandLandmarker.createFromOptions(vis, { baseOptions: { modelAssetPath: MP_MODEL, delegate: 'GPU' }, runningMode: 'VIDEO', numHands: 2, minHandDetectionConfidence: 0.48, minHandPresenceConfidence: 0.48, minTrackingConfidence: 0.48 }); }
+          catch (_) { st.mp = await HandLandmarker.createFromOptions(vis, { baseOptions: { modelAssetPath: MP_MODEL, delegate: 'CPU' }, runningMode: 'VIDEO', numHands: 2, minHandDetectionConfidence: 0.48, minHandPresenceConfidence: 0.48, minTrackingConfidence: 0.48 }); }
+        }
+        st.mode = 'camera'; document.getElementById('modeSub').textContent = 'Kamera & El Takibi'; document.getElementById('switchBtn').textContent = 'Fare Modu';
+        document.getElementById('flipBtn').style.display = mob ? 'inline-flex' : 'none';
+        document.getElementById('overlay').classList.add('hide'); setStatus('İki elini kıstırıp 1 sn sabit tutunca tel havaya kilitlenir!', true);
+      } catch (e) {
+        eb.textContent = 'Kamera/MediaPipe başlatılamadı: ' + (e.message || e) + ' (HTTPS veya localhost üzerinden açtığından emin ol)';
+        eb.classList.add('show');
+      } finally { cb.disabled = false; cb.textContent = 'Kamerayı ve Gitarı Başlat'; }
+    }
+
+    async function startMouse() {
+      await audio.init();
+      if (st.stream) { st.stream.getTracks().forEach(t => t.stop()); st.stream = null; }
+      st.mode = 'mouse'; document.getElementById('modeSub').textContent = 'Fare / Dokunmatik Simülatör'; document.getElementById('switchBtn').textContent = 'Kamera';
+      document.getElementById('flipBtn').style.display = 'none';
+      document.getElementById('overlay').classList.add('hide'); setStatus('Sanal elleri sürükleyip teli kısalt/uzat, fareyi telin üzerinden geçirip çal', true);
+      setTimeout(strumAll, 200);
+    }
+
+    document.getElementById('camBtn').onclick = startCam;
+    document.getElementById('mouseBtn').onclick = startMouse;
+    document.getElementById('flipBtn').onclick = () => { facing = facing === 'user' ? 'environment' : 'user'; startCam(); };
+    document.getElementById('drawerBtn').onclick = (e) => { const op = document.getElementById('dock').classList.toggle('open'); e.target.textContent = op ? 'Kapat ▴' : 'Ayarlar ▾'; };
+    document.getElementById('switchBtn').onclick = () => st.mode === 'camera' ? startMouse() : (document.getElementById('overlay').classList.remove('hide'), startCam());
+    document.getElementById('addBtn').onclick = async () => { await audio.init(); st.count = Math.min(6, st.count + 1); rebuild(); strumAll(); };
+    document.getElementById('remBtn').onclick = () => { st.count = Math.max(1, st.count - 1); rebuild(); };
+    document.getElementById('autoPinBtn').onclick = (e) => { st.autoPin = !st.autoPin; st.gc.hold = 0; e.target.classList.toggle('on', st.autoPin); };
+    document.getElementById('pinBtn').onclick = async () => { await audio.init(); pinNow(); };
+    document.getElementById('clrBtn').onclick = () => { st.pinned = []; updUI(); };
+    document.getElementById('strumBtn').onclick = async () => { await audio.init(); strumAll(); };
+    document.getElementById('presetSel').onchange = (e) => { audio.setPreset(e.target.value); strumAll(); };
+    document.getElementById('scaleSel').onchange = (e) => { st.scale = e.target.value; };
+    document.getElementById('tuningSel').onchange = (e) => { st.tuning = e.target.value; rebuild(); strumAll(); };
+    document.getElementById('skelBtn').onclick = (e) => { st.skel = !st.skel; e.target.classList.toggle('on', st.skel); };
+    document.getElementById('pinchBtn').onclick = (e) => { st.pinchOnly = !st.pinchOnly; e.target.classList.toggle('on', st.pinchOnly); };
+
+    addEventListener('keydown', async (e) => {
+      if (e.target.tagName === 'SELECT') return;
+      if (e.key >= '1' && e.key <= '6') { await audio.init(); st.count = +e.key; rebuild(); strumAll(); }
+      else if (e.key === '+' || e.key === '=') { await audio.init(); st.count = Math.min(6, st.count + 1); rebuild(); }
+      else if (e.key === '-') { st.count = Math.max(1, st.count - 1); rebuild(); }
+      else if (e.code === 'Space') { e.preventDefault(); await audio.init(); pinNow(); }
+      else if (e.key === 'Enter') { await audio.init(); strumAll(); }
+      else if (e.key === 'm' || e.key === 'M') audio.dampAll();
+    });
+
+    canvas.addEventListener('pointerdown', async (e) => {
+      await audio.init();
+      const x = e.clientX, y = e.clientY;
+      if (st.mode === 'mouse') {
+        if (Math.hypot(x - st.vh.l.x * W, y - st.vh.l.y * H) < 36) { st.vh.drag = 'l'; canvas.setPointerCapture(e.pointerId); return; }
+        if (Math.hypot(x - st.vh.r.x * W, y - st.vh.r.y * H) < 36) { st.vh.drag = 'r'; canvas.setPointerCapture(e.pointerId); return; }
+      }
+      st.vh.ptr = { x, y, on: true };
+    });
+    canvas.addEventListener('pointermove', (e) => {
+      const x = e.clientX, y = e.clientY;
+      if (st.mode === 'mouse' && st.vh.drag) {
+        st.vh[st.vh.drag] = { x: Math.max(0.06, Math.min(0.94, x / W)), y: Math.max(0.14, Math.min(0.86, y / H)) };
+        st.vh.ptr.on = false; return;
+      }
+      st.vh.ptr = { x, y, on: true };
+    });
+    canvas.addEventListener('pointerup', () => { st.vh.drag = null; });
+    canvas.addEventListener('pointerleave', () => { st.vh.drag = null; st.vh.ptr.on = false; });
+
+    function drawStr(s) {
+      const dx = s.b.x - s.a.x, dy = s.b.y - s.a.y, len = Math.hypot(dx, dy); if (len < 20) return;
+      const nx = -dy / len, ny = dx / len, segs = 46, pts = [];
+      for (let i = 0; i <= segs; i++) {
+        const u = i / segs; let disp = 0;
+        if (s.amp > 0.05) disp += s.amp * s.dir * (Math.sin(Math.PI * u) * Math.cos(s.ph) + 0.34 * Math.sin(2 * Math.PI * u) * Math.sin(2 * Math.PI * s.pos) * Math.cos(s.ph * 2.02) + 0.14 * Math.sin(3 * Math.PI * u) * Math.cos(s.ph * 3.04));
+        if (Math.abs(s.pull) > 0.5) disp += s.pull * (u <= s.ppos ? u / Math.max(0.05, s.ppos) : (1 - u) / Math.max(0.05, 1 - s.ppos));
+        pts.push({ x: s.a.x + dx * u + nx * disp, y: s.a.y + dy * u + ny * disp });
+      }
+      const eb = Math.min(1, s.amp / 20);
+      ctx.save(); ctx.strokeStyle = s.pal.g; ctx.globalAlpha = 0.38 + eb * 0.32; ctx.lineWidth = 1.2;
+      for (let f = 1; f <= 11; f++) { const u = 1 - Math.pow(2, -f / 12); if (u > 0.92) break; const p = pts[Math.round(u * segs)], tk = (f === 5 || f === 7) ? 7 : 4; ctx.beginPath(); ctx.moveTo(p.x - nx * tk, p.y - ny * tk); ctx.lineTo(p.x + nx * tk, p.y + ny * tk); ctx.stroke(); }
+      ctx.restore();
+      const tr = () => { ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y); };
+      ctx.save(); ctx.lineCap = 'round';
+      ctx.globalAlpha = 0.45 + eb * 0.35; ctx.strokeStyle = s.pal.g; ctx.shadowColor = s.pal.g; ctx.shadowBlur = 18 + eb * 15; ctx.lineWidth = s.th * 3.4 + eb * 2.4; tr(); ctx.stroke();
+      ctx.globalAlpha = 0.85; ctx.strokeStyle = s.pal.m; ctx.shadowBlur = 7; ctx.lineWidth = s.th * 1.4; tr(); ctx.stroke();
+      ctx.globalAlpha = 0.96; ctx.strokeStyle = '#fff'; ctx.shadowBlur = 3; ctx.lineWidth = Math.max(1.1, s.th * 0.7); tr(); ctx.stroke();
+      for (const ep of [s.a, s.b]) { ctx.beginPath(); ctx.fillStyle = '#fff'; ctx.shadowColor = s.pal.g; ctx.shadowBlur = 12; ctx.arc(ep.x, ep.y, s.pin ? 4.4 : 3.8 + eb * 1.5, 0, 6.28); ctx.fill(); }
+      const le = s.a.x <= s.b.x ? s.a : s.b, txt = `${nLbl(s.f)} · ${Math.round(s.f)}Hz`;
+      ctx.shadowBlur = 0; ctx.font = '600 11px ui-monospace, monospace'; const bw = ctx.measureText(txt).width + 12, bx = Math.max(8, le.x - bw - 10), by = le.y - 10;
+      ctx.fillStyle = 'rgba(14,15,18,0.8)'; ctx.beginPath(); ctx.roundRect(bx, by, bw, 20, 5); ctx.fill();
+      ctx.strokeStyle = s.pal.g; ctx.lineWidth = 1; ctx.stroke();
+      ctx.fillStyle = '#f8fafc'; ctx.textBaseline = 'middle'; ctx.fillText(txt, bx + 6, le.y + 0.5);
+      ctx.restore();
+    }
+
+    function drawRing(x, y, prog, col, lbl) {
+      const p = Math.max(0, Math.min(1, prog)), r = 24;
+      ctx.save();
+      ctx.fillStyle = 'rgba(12,13,17,0.72)'; ctx.beginPath(); ctx.arc(x, y, r + 5, 0, 6.28); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.28); ctx.stroke();
+      ctx.strokeStyle = col; ctx.shadowColor = col; ctx.shadowBlur = 14; ctx.lineWidth = 4; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.arc(x, y, r, -1.5708, -1.5708 + 6.2832 * p); ctx.stroke();
+      ctx.shadowBlur = 0; ctx.fillStyle = '#fff'; ctx.font = '600 11px ui-monospace, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(`${Math.round(p * 100)}%`, x, y);
+      ctx.font = '600 11.5px sans-serif'; const tw = ctx.measureText(lbl).width + 14;
+      ctx.fillStyle = 'rgba(12,13,17,0.82)'; ctx.beginPath(); ctx.roundRect(x - tw / 2, y + r + 10, tw, 22, 6); ctx.fill();
+      ctx.fillStyle = '#f8fafc'; ctx.fillText(lbl, x, y + r + 21);
+      ctx.restore();
+    }
+
+    let lastT = performance.now();
+    function loop(now) {
+      const dt = Math.min(0.05, Math.max(0.004, (now - lastT) / 1000)); lastT = now;
+      ctx.clearRect(0, 0, W, H);
+      let anchors = null, pluckers = [], hands = [], bothPinched = false, bothFists = false;
+
+      if (st.mode === 'camera' && video.readyState >= 2) {
+        const vw = video.videoWidth || 1280, vh = video.videoHeight || 720, sc = Math.max(W / vw, H / vh);
+        const dw = vw * sc, dh = vh * sc, ox = (W - dw) / 2, oy = (H - dh) / 2, mir = facing === 'user';
+        ctx.save(); if (mir) { ctx.translate(W, 0); ctx.scale(-1, 1); } ctx.drawImage(video, ox, oy, dw, dh); ctx.restore();
+        if (st.mp && video.currentTime !== st.lastVT) { st.lastVT = video.currentTime; st.hands = st.mp.detectForVideo(video, now).landmarks || []; }
+        hands = st.hands.map(lm => {
+          const pts = lm.map(p => ({ x: ox + (mir ? (1 - p.x) : p.x) * dw, y: oy + p.y * dh }));
+          const w = pts[0], ps = Math.max(24, Math.hypot(pts[9].x - w.x, pts[9].y - w.y));
+          let curled = 0;
+          for (const [ti, pi] of [[8,6],[12,10],[16,14],[20,18]]) {
+            if (Math.hypot(pts[ti].x - w.x, pts[ti].y - w.y) < Math.hypot(pts[pi].x - w.x, pts[pi].y - w.y) * 1.02) curled++;
+          }
+          return { pts, th: pts[4], ix: pts[8], md: pts[12], pr: Math.hypot(pts[4].x - pts[8].x, pts[4].y - pts[8].y) / ps, fist: curled === 4, cx: (w.x + pts[9].x) * 0.5 };
+        }).sort((a, b) => a.cx - b.cx);
+
+        const smP = (id, pt, pri) => { const o = st.smP.get(id); const n = o ? { x: lerp(o.x, pt.x, 0.72), y: lerp(o.y, pt.y, 0.72) } : { ...pt }; st.smP.set(id, n); return { id, x: n.x, y: n.y, pri }; };
+        if (hands.length >= 2) {
+          const L = hands[0], R = hands[1];
+          bothFists = L.fist && R.fist;
+          st.pinSt.l = st.pinSt.l ? L.pr < 0.60 : L.pr < 0.48;
+          st.pinSt.r = st.pinSt.r ? R.pr < 0.60 : R.pr < 0.48;
+          const lp = st.pinSt.l && !L.fist, rp = st.pinSt.r && !R.fist;
+          bothPinched = lp && rp;
+          const rA = lp ? { x: (L.th.x + L.ix.x) * 0.5, y: (L.th.y + L.ix.y) * 0.5 } : L.th;
+          const rB = rp ? { x: (R.th.x + R.ix.x) * 0.5, y: (R.th.y + R.ix.y) * 0.5 } : R.th;
+          st.smA = st.smA ? { x: lerp(st.smA.x, rA.x, 0.42), y: lerp(st.smA.y, rA.y, 0.42) } : { ...rA };
+          st.smB = st.smB ? { x: lerp(st.smB.x, rB.x, 0.42), y: lerp(st.smB.y, rB.y, 0.42) } : { ...rB };
+          if (!bothFists && (!st.pinchOnly || lp || rp)) anchors = { a: st.smA, b: st.smB };
+          if (!bothFists) {
+            if (!lp) pluckers.push(smP('li', L.ix, true));
+            if (!rp) pluckers.push(smP('ri', R.ix, true));
+            pluckers.push(smP('lm', L.md, false), smP('rm', R.md, false));
+          }
+          if (bothFists && st.pinned.length) setStatus('İki yumruk algılandı — sabit telleri silmek için tut…', false);
+          else if (st.autoPin) setStatus('2 el aktif — kıstırıp 1 sn sabit tutunca havaya kilitlenir, işaret parmağınla çek!', true);
+          else setStatus('2 el aktif — ellerini yaklaştır/uzaklaştır ve işaret parmağınla teli çek!', true);
+        } else if (hands.length === 1) {
+          st.smA = st.smB = null; pluckers.push(smP('si', hands[0].ix, true), smP('sm', hands[0].md, false));
+          setStatus(st.pinned.length ? '1 el aktif — sabitlenen telleri çalabilirsin!' : '1 el algılandı — teli germek için diğer elini de göster', st.pinned.length > 0);
+        } else { st.smA = st.smB = null; setStatus('İki elini kameraya göster', false); }
+        if (st.vh.ptr.on) pluckers.push({ id: 'ms', x: st.vh.ptr.x, y: st.vh.ptr.y, pri: false });
+      } else {
+        const g = ctx.createRadialGradient(W * 0.5, H * 0.46, 30, W * 0.5, H * 0.5, Math.max(W, H) * 0.7);
+        g.addColorStop(0, '#1b1d25'); g.addColorStop(1, '#0b0c0f'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+        anchors = { a: { x: st.vh.l.x * W, y: st.vh.l.y * H }, b: { x: st.vh.r.x * W, y: st.vh.r.y * H } };
+        if (st.vh.ptr.on && !st.vh.drag) pluckers.push({ id: 'ms', x: st.vh.ptr.x, y: st.vh.ptr.y, pri: true });
+      }
+
+      const refL = Math.max(200, W * 0.44);
+      if (anchors && Math.hypot(anchors.b.x - anchors.a.x, anchors.b.y - anchors.a.y) > 36) {
+        st.active = true;
+        const dx = anchors.b.x - anchors.a.x, dy = anchors.b.y - anchors.a.y, d = Math.hypot(dx, dy);
+        const nx = -dy / d, ny = dx / d, fl = ny < 0 ? -1 : 1, px = nx * fl, py = ny * fl;
+        const sp = Math.min(28, Math.max(16, H * 0.048)), hs = ((st.live.length - 1) * sp) / 2;
+        const pr = Math.max(0.42, Math.min(3.4, refL / Math.max(60, d)));
+        for (let i = 0; i < st.live.length; i++) {
+          const s = st.live[i], off = i * sp - hs;
+          s.a = { x: anchors.a.x + px * off, y: anchors.a.y + py * off };
+          s.b = { x: anchors.b.x + px * off, y: anchors.b.y + py * off };
+          s.len = d; s.f = quant(s.of * pr, st.scale);
+          if (s.amp > 0.15) audio.pitch(s.id, s.f);
+        }
+        document.getElementById('tNote').textContent = nLbl(st.live[0].f);
+        document.getElementById('tFreq').textContent = `${Math.round(st.live[0].f)} Hz`;
+        document.getElementById('tLen').textContent = `${Math.round(d)} px`;
+      } else { st.active = false; }
+
+      // Hands-Free Auto-Pin (hold both pinched steady ~1s) & Two-Fist Clear (~0.9s)
+      let pinProg = 0, pinPos = null, clrProg = 0;
+      const gc = st.gc;
+      if (st.mode === 'camera') {
+        if (st.autoPin && bothPinched && anchors && st.active) {
+          const mx = (anchors.a.x + anchors.b.x) * 0.5, my = (anchors.a.y + anchors.b.y) * 0.5;
+          if (gc.reset && gc.lastMid) {
+            if (Math.hypot(mx - gc.lastMid.x, my - gc.lastMid.y) > 48) { gc.reset = false; gc.refA = {...anchors.a}; gc.refB = {...anchors.b}; gc.hold = 0; }
+          } else if (!gc.refA || !gc.refB) {
+            gc.refA = {...anchors.a}; gc.refB = {...anchors.b}; gc.hold = 0;
+          } else {
+            const mA = Math.hypot(anchors.a.x - gc.refA.x, anchors.a.y - gc.refA.y);
+            const mB = Math.hypot(anchors.b.x - gc.refB.x, anchors.b.y - gc.refB.y);
+            if (mA < 22 && mB < 22) {
+              gc.hold += dt;
+              if (gc.hold > 0.22) { pinProg = (gc.hold - 0.22) / 0.82; pinPos = { x: mx, y: my }; }
+              if (pinProg >= 1) {
+                if (pinNow() > 0) {
+                  gc.flash = 1; gc.fPos = { x: mx, y: my }; gc.reset = true; gc.lastMid = { x: mx, y: my }; gc.hold = 0; pinProg = 0;
+                  setStatus(`Sabitlendi! (${st.pinned.length} sabit tel) — elini kaydırıp yenisini ekleyebilirsin`, true);
+                }
+              }
+            } else { gc.refA = {...anchors.a}; gc.refB = {...anchors.b}; gc.hold = 0; }
+          }
+        } else { gc.refA = gc.refB = null; gc.hold = 0; if (!bothPinched) gc.reset = false; }
+
+        if (bothFists && st.pinned.length > 0) {
+          gc.fist += dt;
+          if (gc.fist > 0.16) clrProg = (gc.fist - 0.16) / 0.78;
+          if (clrProg >= 1) { st.pinned = []; audio.dampAll(); updUI(); gc.fist = 0; clrProg = 0; setStatus('Sabitlenen tüm teller temizlendi!', true); }
+        } else { gc.fist = 0; }
+      }
+
+      const all = [...(st.active ? st.live : []), ...st.pinned];
+      for (const s of all) s.pull *= 0.65;
+      const seen = new Set();
+      for (const p of pluckers) {
+        seen.add(p.id); const prev = st.prevPlk.get(p.id);
+        if (prev) {
+          const md = Math.hypot(p.x - prev.x, p.y - prev.y), spd = md / Math.max(0.008, dt);
+          for (const s of all) {
+            const prx = p2s(p, s.a, s.b);
+            if (prx.u > 0.04 && prx.u < 0.96 && prx.d < 22) { s.pull = prx.sd * 0.55; s.ppos = prx.u; }
+            const ck = `${p.id}::${s.id}`; if (now - (st.cds.get(ck) || 0) < 85) continue;
+            const hit = inter(prev, p, s.a, s.b);
+            if (hit) { st.cds.set(ck, now); pluckS(s, hit.u, Math.max(0.32, Math.min(1, spd / 950)), p2s(prev, s.a, s.b).sd >= 0 ? -1 : 1); }
+          }
+        }
+        st.prevPlk.set(p.id, { x: p.x, y: p.y });
+      }
+      for (const k of st.prevPlk.keys()) if (!seen.has(k)) st.prevPlk.delete(k);
+
+      for (const s of [...st.live, ...st.pinned]) { if (s.amp > 0.04) { s.ph += (36 + Math.min(60, s.f * 0.14)) * dt; s.amp *= Math.exp(-2.6 * dt); } else s.amp = 0; }
+      for (let i = st.sparks.length - 1; i >= 0; i--) { const p = st.sparks[i]; p.x += p.vx; p.y += p.vy; p.vx *= 0.95; p.vy *= 0.95; p.l -= p.d; if (p.l <= 0) st.sparks.splice(i, 1); }
+
+      if (st.skel && hands.length) {
+        ctx.save();
+        for (const h of hands) {
+          ctx.strokeStyle = '#22c55e'; ctx.lineWidth = 2.3; ctx.beginPath();
+          for (const [i, j] of CONNS) { ctx.moveTo(h.pts[i].x, h.pts[i].y); ctx.lineTo(h.pts[j].x, h.pts[j].y); }
+          ctx.stroke();
+          for (let i = 0; i < 21; i++) { ctx.beginPath(); ctx.fillStyle = '#ef4444'; ctx.arc(h.pts[i].x, h.pts[i].y, (i === 4 || i === 8) ? 4.6 : 3.2, 0, 6.28); ctx.fill(); }
+        }
+        ctx.restore();
+      }
+      if (st.mode !== 'camera' && anchors) {
+        ctx.save();
+        for (const [pt, lb] of [[anchors.a, 'Sol El (Sürükle)'], [anchors.b, 'Sağ El (Sürükle)']]) {
+          ctx.beginPath(); ctx.strokeStyle = 'rgba(255,255,255,0.78)'; ctx.lineWidth = 2; ctx.arc(pt.x, pt.y, 16, 0, 6.28); ctx.stroke();
+          ctx.font = '500 11px sans-serif'; ctx.fillStyle = 'rgba(244,241,234,0.75)'; ctx.textAlign = 'center'; ctx.fillText(lb, pt.x, pt.y + 30);
+        }
+        ctx.restore();
+      }
+      for (const p of pluckers) { if (!p.pri) continue; ctx.save(); ctx.beginPath(); ctx.strokeStyle = '#fff'; ctx.shadowColor = '#f472b6'; ctx.shadowBlur = 12; ctx.lineWidth = 2; ctx.arc(p.x, p.y, 10, 0, 6.28); ctx.stroke(); ctx.restore(); }
+      for (const s of st.pinned) drawStr(s);
+      if (st.active) for (const s of st.live) drawStr(s);
+      for (const p of st.sparks) { ctx.save(); ctx.globalAlpha = Math.max(0, p.l); ctx.fillStyle = '#fff'; ctx.shadowColor = p.c; ctx.shadowBlur = 10; ctx.beginPath(); ctx.arc(p.x, p.y, p.sz * p.l, 0, 6.28); ctx.fill(); ctx.restore(); }
+
+      if (pinProg > 0 && pinPos) drawRing(pinPos.x, pinPos.y, pinProg, '#34d399', 'Havaya Sabitleniyor…');
+      if (clrProg > 0) drawRing(W * 0.5, H * 0.44, clrProg, '#ef4444', 'Sabit Teller Siliniyor…');
+      if (gc.flash > 0.01) {
+        ctx.save(); ctx.globalAlpha = gc.flash; ctx.strokeStyle = '#34d399'; ctx.shadowColor = '#34d399'; ctx.shadowBlur = 18; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(gc.fPos.x, gc.fPos.y, 24 + (1 - gc.flash) * 44, 0, 6.28); ctx.stroke(); ctx.restore();
+        gc.flash *= Math.exp(-5.5 * dt);
+      }
+
+      requestAnimationFrame(loop);
+    }
+    rebuild(); requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
